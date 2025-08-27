@@ -5,39 +5,72 @@
   <title>Auto Marking System</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      font-family: Arial, sans-serif;
-      background: #f8f9fa;
-    }
-    iframe {
-      width: 100%;
-      height: 100vh; /* full viewport height */
-      border: none;
-    }
-    .fallback {
-      text-align: center;
-      padding: 20px;
-    }
-    .fallback a {
-      color: #007bff;
-      font-weight: bold;
+    body { font-family: Arial, sans-serif; background: #f8f9fa; text-align: center; padding: 50px; }
+    #message { font-size: 18px; color: red; margin-bottom: 20px; }
+    #countdown { font-weight: bold; margin-bottom: 20px; }
+    a.button {
+      display: inline-block;
+      padding: 12px 20px;
+      font-size: 18px;
+      color: white;
+      background: #007bff;
+      border-radius: 5px;
       text-decoration: none;
     }
-    .fallback a:hover {
-      text-decoration: underline;
+    a.button.disabled {
+      background: #ccc;
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
-  <iframe src="https://script.google.com/macros/s/AKfycbwwhZw6D-6pB0Bwr8fOOuKEhb5vuplBT7BFSxOLKjHw/exec">
-    <!-- Fallback message if iframe does not load -->
-    <div class="fallback">
-      <p>Your browser does not support iframes.</p>
-      <p>Click here to open the <a href="https://script.google.com/macros/s/AKfycbwwhZw6D-6pB0Bwr8fOOuKEhb5vuplBT7BFSxOLKjHw/exec" target="_blank">Auto Marking System</a></p>
-    </div>
-  </iframe>
+  <div id="message"></div>
+  <div id="countdown"></div>
+  <a id="examLink" href="https://script.google.com/macros/s/AKfycbwwhZw6D-6pB0Bwr8fOOuKEhb5vuplBT7BFSxOLKjHw/exec" target="_blank" class="button disabled">Open Exam</a>
+
+  <script>
+    let examStart, examEnd;
+
+    function fetchExamTime() {
+      google.script.run.withSuccessHandler(function(times){
+        if(times.start && times.end){
+          examStart = new Date(times.start);
+          examEnd   = new Date(times.end);
+          updateUI();
+          setInterval(updateUI, 1000);
+        } else {
+          document.getElementById('message').innerText = "Exam date/time not set.";
+        }
+      }).getExamTime();
+    }
+
+    function updateUI(){
+      const now = new Date();
+      const messageDiv = document.getElementById('message');
+      const countdownDiv = document.getElementById('countdown');
+      const examLink = document.getElementById('examLink');
+
+      if(!examStart || !examEnd) return;
+
+      if(now < examStart){
+        messageDiv.innerText = "Exam has not started yet!";
+        countdownDiv.innerText = "Starts at: " + examStart.toLocaleString();
+        examLink.classList.add("disabled");
+      } else if(now > examEnd){
+        messageDiv.innerText = "Exam time is over!";
+        countdownDiv.innerText = "";
+        examLink.classList.add("disabled");
+      } else {
+        messageDiv.innerText = "";
+        const diff = examEnd - now;
+        const minutes = Math.floor(diff/60000);
+        const seconds = Math.floor((diff%60000)/1000);
+        countdownDiv.innerText = `Time left: ${minutes} min ${seconds} sec`;
+        examLink.classList.remove("disabled");
+      }
+    }
+
+    fetchExamTime();
+  </script>
 </body>
 </html>
