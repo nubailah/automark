@@ -1,101 +1,84 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Exam Portal</title>
-  <style>
-    body { font-family: Arial; max-width: 800px; margin:auto; padding:20px; }
-    h1 { text-align:center; }
-    #pdfLink { text-align:center; margin-bottom:20px; }
-    .student-info { display:flex; gap:10px; justify-content:center; margin-bottom:20px; flex-wrap:wrap; }
-    #questions { display:flex; flex-direction:column; gap:10px; margin-bottom:20px; }
-    .question-row { display:flex; justify-content:space-between; background:#f9f9f9; padding:10px; border-radius:5px; }
-    .question-row p { margin:0; width:60%; }
-    .question-row input { width:35%; padding:5px; }
-    button { padding:10px 20px; font-size:16px; cursor:pointer; }
-    button:disabled { opacity:0.6; cursor:not-allowed; }
-    #result { text-align:center; font-weight:bold; margin-top:15px; }
-  </style>
+<meta charset="UTF-8">
+<title>Exam Portal</title>
+<style>
+body { font-family: Arial; max-width:800px; margin:auto; padding:20px; }
+h1 { text-align:center; }
+#pdfLink { text-align:center; margin-bottom:20px; }
+.student-info { display:flex; gap:10px; justify-content:center; margin-bottom:20px; flex-wrap:wrap; }
+#questions { display:flex; flex-direction:column; gap:10px; margin-bottom:20px; }
+.question-row { display:flex; justify-content:space-between; background:#f9f9f9; padding:10px; border-radius:5px; }
+.question-row p { margin:0; width:60%; }
+.question-row input { width:35%; padding:5px; }
+button { padding:10px 20px; font-size:16px; cursor:pointer; }
+button:disabled { opacity:0.6; cursor:not-allowed; }
+#result { text-align:center; font-weight:bold; margin-top:15px; }
+</style>
 </head>
 <body>
-  <h1>Exam Portal</h1>
-  <div id="pdfLink">Loading PDF link...</div>
+<h1>Exam Portal</h1>
+<div id="pdfLink">Loading PDF link...</div>
+<div class="student-info">
+<input type="text" id="studentName" placeholder="Your Name">
+<input type="text" id="studentID" placeholder="Student ID">
+<button id="loadQuestionsBtn" onclick="loadQuestions()">Load Questions</button>
+<button id="submitBtn" onclick="submitAnswers()" disabled>Submit Answers</button>
+</div>
+<div id="questions"></div>
+<p id="result"></p>
 
-  <div class="student-info">
-    <input type="text" id="studentName" placeholder="Your Name">
-    <input type="text" id="studentID" placeholder="Student ID">
-    <button id="loadQuestionsBtn" onclick="loadQuestions()">Load Questions</button>
-    <button id="submitBtn" onclick="submitAnswers()" disabled>Submit Answers</button>
-  </div>
+<script>
+const WEBAPP_URL="https://script.google.com/macros/s/AKfycbwwhZw6D-6pB0Bwr8fOOuKEhb5vuplBT7BFSxOLKjHw/exec";
+let questionData=[];
 
-  <div id="questions"></div>
-  <p id="result"></p>
+async function loadPdfLink(){
+  try{
+    const res = await fetch(`${WEBAPP_URL}?action=getPdfLink`);
+    const data = await res.json();
+    const pdfContainer = document.getElementById("pdfLink");
+    if(data.link) pdfContainer.innerHTML=`<a href="${data.link}" target="_blank">Click here to open PDF</a>`;
+    else pdfContainer.innerText="No PDF link available.";
+  }catch(err){document.getElementById("pdfLink").innerText="Failed to load PDF link: "+err;}
+}
 
-  <script>
-    const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwwhZw6D-6pB0Bwr8fOOuKEhb5vuplBT7BFSxOLKjHw/exec"; // ganti dengan /exec
+async function loadQuestions(){
+  const name=document.getElementById("studentName").value.trim();
+  const id=document.getElementById("studentID").value.trim();
+  if(!name||!id){alert("Please enter name and ID first"); return;}
+  try{
+    const res=await fetch(`${WEBAPP_URL}?action=getQuestions`);
+    questionData=await res.json();
+    const container=document.getElementById("questions");
+    container.innerHTML="";
+    questionData.forEach((q,i)=>{
+      const div=document.createElement("div");
+      div.className="question-row";
+      div.innerHTML=`<p>${i+1}. ${q.question} (Max: ${q.maxMark})</p>
+                     <input type="text" id="ans${i}" placeholder="Your answer">`;
+      container.appendChild(div);
+    });
+    document.getElementById("submitBtn").disabled=false;
+  }catch(err){document.getElementById("questions").innerText="Failed to load questions: "+err;}
+}
 
-    let questionData = [];
+async function submitAnswers(){
+  const name=document.getElementById("studentName").value.trim();
+  const id=document.getElementById("studentID").value.trim();
+  const answers=questionData.map((_,i)=>document.getElementById(`ans${i}`).value);
+  try{
+    const res=await fetch(WEBAPP_URL,{
+      method:"POST",
+      body:JSON.stringify({action:"checkAnswersAndSave",name,id,answers}),
+      headers:{"Content-Type":"application/json"}
+    });
+    const data=await res.json();
+    document.getElementById("result").innerText=data.message;
+  }catch(err){document.getElementById("result").innerText="Error submitting answers: "+err;}
+}
 
-    async function loadPdfLink() {
-      try {
-        const res = await fetch(`${WEBAPP_URL}?action=getPdfLink`);
-        const data = await res.json();
-        const pdfContainer = document.getElementById("pdfLink");
-        if(data.link){
-          pdfContainer.innerHTML = `<a href="${data.link}" target="_blank">Click here to open PDF</a>`;
-        } else {
-          pdfContainer.innerText = "No PDF link available.";
-        }
-      } catch(err) {
-        document.getElementById("pdfLink").innerText = "Failed to load PDF link: " + err;
-      }
-    }
-
-    async function loadQuestions() {
-      const name = document.getElementById("studentName").value.trim();
-      const id = document.getElementById("studentID").value.trim();
-      if (!name || !id) { alert("Please enter name and ID first"); return; }
-
-      try {
-        const res = await fetch(`${WEBAPP_URL}?action=getQuestions`);
-        questionData = await res.json();
-
-        const container = document.getElementById("questions");
-        container.innerHTML = "";
-
-        questionData.forEach((q, i) => {
-          const div = document.createElement("div");
-          div.className = "question-row";
-          div.innerHTML = `<p>${i+1}. ${q.question} (Max: ${q.maxMark})</p>
-                           <input type="text" id="ans${i}" placeholder="Your answer">`;
-          container.appendChild(div);
-        });
-
-        document.getElementById("submitBtn").disabled = false;
-      } catch(err) {
-        document.getElementById("questions").innerText = "Failed to load questions: " + err;
-      }
-    }
-
-    async function submitAnswers() {
-      const name = document.getElementById("studentName").value.trim();
-      const id = document.getElementById("studentID").value.trim();
-      const answers = questionData.map((_, i) => document.getElementById(`ans${i}`).value);
-
-      try {
-        const res = await fetch(WEBAPP_URL, {
-          method: "POST",
-          body: JSON.stringify({ action:"checkAnswersAndSave", name, id, answers }),
-          headers: { "Content-Type":"application/json" }
-        });
-        const data = await res.json();
-        document.getElementById("result").innerText = data.message;
-      } catch(err) {
-        document.getElementById("result").innerText = "Error submitting answers: " + err;
-      }
-    }
-
-    window.onload = loadPdfLink;
-  </script>
+window.onload=loadPdfLink;
+</script>
 </body>
 </html>
