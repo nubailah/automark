@@ -5,7 +5,8 @@
   <title>Exam Portal</title>
 </head>
 <body>
-  <h1>Exam</h1>
+  <h1>Exam Portal</h1>
+
   <div id="questions"></div>
   <br>
   <input type="text" id="studentName" placeholder="Your Name">
@@ -15,7 +16,7 @@
   <p id="result"></p>
 
   <script>
-    const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzlGHcP9wDP4I9ifmpUuFxuzwl_FqnbuPaok4-7NG17i6e6g4Xy55B5cP5g7ahW80jcKg/exec"; // gantikan dengan URL /exec
+    const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzlGHcP9wDP4I9ifmpUuFxuzwl_FqnbuPaok4-7NG17i6e6g4Xy55B5cP5g7ahW80jcKg/exec"; // Ganti dengan URL /exec
 
     let questionData = [];
 
@@ -44,16 +45,19 @@
 
       const answers = questionData.map((_, i) => document.getElementById(`ans${i}`).value);
 
-      const res = await fetch(WEBAPP_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "checkAnswersAndSave", name, id, answers }),
-        headers: { "Content-Type": "application/json" }
-      });
-      const data = await res.json();
-      document.getElementById("result").innerText = data.message;
+      try {
+        const res = await fetch(WEBAPP_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "checkAnswersAndSave", name, id, answers }),
+          headers: { "Content-Type": "application/json" }
+        });
+        const data = await res.json();
+        document.getElementById("result").innerText = data.message;
+      } catch (err) {
+        document.getElementById("result").innerText = "Error submitting answers: " + err;
+      }
     }
 
-    // Load questions on page load
     window.onload = loadQuestions;
   </script>
 </body>
