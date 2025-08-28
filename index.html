@@ -40,7 +40,7 @@ async function loadPdfLink(){
     const res=await fetch(`${WEBAPP_URL}?action=getPdfLink`);
     const data=await res.json();
     const pdfContainer=document.getElementById("pdfLink");
-    if(data.link) pdfContainer.innerHTML=`<a href="${data.link}" target="_blank">Click here to open PDF</a>`;
+    if(data.link) pdfContainer.innerHTML=`<a href="${data.link}" target="_blank">Click here to open Question</a>`;
     else pdfContainer.innerText="No PDF link available.";
   }catch(err){document.getElementById("pdfLink").innerText="Failed to load PDF link: "+err;}
 }
