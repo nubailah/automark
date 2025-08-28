@@ -20,24 +20,26 @@ button:disabled { opacity:0.6; cursor:not-allowed; }
 <body>
 <h1>Exam Portal</h1>
 <div id="pdfLink">Loading PDF link...</div>
+
 <div class="student-info">
 <input type="text" id="studentName" placeholder="Your Name">
 <input type="text" id="studentID" placeholder="Student ID">
 <button id="loadQuestionsBtn" onclick="loadQuestions()">Load Questions</button>
 <button id="submitBtn" onclick="submitAnswers()" disabled>Submit Answers</button>
 </div>
+
 <div id="questions"></div>
 <p id="result"></p>
 
 <script>
-const WEBAPP_URL="https://script.google.com/macros/s/AKfycbwwhZw6D-6pB0Bwr8fOOuKEhb5vuplBT7BFSxOLKjHw/exec";
+const WEBAPP_URL="https://script.google.com/macros/s/AKfycbzlGHcP9wDP4I9ifmpUuFxuzwl_FqnbuPaok4-7NG17i6e6g4Xy55B5cP5g7ahW80jcKg/exec"; // Ganti dengan Web App /exec URL
 let questionData=[];
 
 async function loadPdfLink(){
   try{
-    const res = await fetch(`${WEBAPP_URL}?action=getPdfLink`);
-    const data = await res.json();
-    const pdfContainer = document.getElementById("pdfLink");
+    const res=await fetch(`${WEBAPP_URL}?action=getPdfLink`);
+    const data=await res.json();
+    const pdfContainer=document.getElementById("pdfLink");
     if(data.link) pdfContainer.innerHTML=`<a href="${data.link}" target="_blank">Click here to open PDF</a>`;
     else pdfContainer.innerText="No PDF link available.";
   }catch(err){document.getElementById("pdfLink").innerText="Failed to load PDF link: "+err;}
@@ -46,7 +48,7 @@ async function loadPdfLink(){
 async function loadQuestions(){
   const name=document.getElementById("studentName").value.trim();
   const id=document.getElementById("studentID").value.trim();
-  if(!name||!id){alert("Please enter name and ID first"); return;}
+  if(!name || !id){alert("Enter name & ID"); return;}
   try{
     const res=await fetch(`${WEBAPP_URL}?action=getQuestions`);
     questionData=await res.json();
