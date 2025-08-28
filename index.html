@@ -1,76 +1,102 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Auto Marking System</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { font-family: Arial, sans-serif; background: #f8f9fa; text-align: center; padding: 50px; }
-    #message { font-size: 18px; color: red; margin-bottom: 20px; }
-    #countdown { font-weight: bold; margin-bottom: 20px; }
-    a.button {
-      display: inline-block;
-      padding: 12px 20px;
-      font-size: 18px;
-      color: white;
-      background: #007bff;
-      border-radius: 5px;
-      text-decoration: none;
-    }
-    a.button.disabled {
-      background: #ccc;
-      pointer-events: none;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Auto Marking System</title>
+<style>
+body { font-family: Arial; margin: 20px; background: #f8f9fa; }
+.card { background:white; padding:20px; border-radius:8px; max-width:800px; margin:auto; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+h2 { text-align:center; }
+.input-group { margin-bottom:10px; }
+label { font-weight:bold; }
+input[type=text] { width:100%; padding:8px; border-radius:4px; border:1px solid #ccc; }
+.question-row { margin-bottom:10px; }
+.question { font-weight:bold; margin-bottom:5px; }
+.answer input { width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; }
+button { background:#007bff; color:white; padding:10px 15px; border:none; border-radius:4px; cursor:pointer; }
+button:disabled { background:#ccc; cursor:not-allowed; }
+#loading { color:red; font-weight:bold; text-align:center; margin:10px 0; }
+a.pdf-link { color:#007bff; font-weight:bold; text-decoration:none; }
+</style>
 </head>
 <body>
-  <div id="message"></div>
-  <div id="countdown"></div>
-  <a id="examLink" href="https://script.google.com/macros/s/AKfycbwwhZw6D-6pB0Bwr8fOOuKEhb5vuplBT7BFSxOLKjHw/exec" target="_blank" class="button disabled">Open Exam</a>
+<div class="card">
+<h2>Student Answers</h2>
+<div id="pdfLinkContainer" style="text-align:center;"></div>
+<div id="loading"></div>
 
-  <script>
-    let examStart, examEnd;
+<div class="input-group">
+<label>Student Name:</label>
+<input type="text" id="studentName">
+</div>
+<div class="input-group">
+<label>Student ID:</label>
+<input type="text" id="studentId">
+</div>
 
-    function fetchExamTime() {
-      google.script.run.withSuccessHandler(function(times){
-        if(times.start && times.end){
-          examStart = new Date(times.start);
-          examEnd   = new Date(times.end);
-          updateUI();
-          setInterval(updateUI, 1000);
-        } else {
-          document.getElementById('message').innerText = "Exam date/time not set.";
-        }
-      }).getExamTime();
-    }
+<div id="questions"></div>
 
-    function updateUI(){
-      const now = new Date();
-      const messageDiv = document.getElementById('message');
-      const countdownDiv = document.getElementById('countdown');
-      const examLink = document.getElementById('examLink');
+<button id="submitBtn" onclick="submitAnswers()">Submit Answers</button>
+</div>
 
-      if(!examStart || !examEnd) return;
+<script>
+const WEBAPP_URL = "PASTE_YOUR_WEB_APP_URL_HERE";
 
-      if(now < examStart){
-        messageDiv.innerText = "Exam has not started yet!";
-        countdownDiv.innerText = "Starts at: " + examStart.toLocaleString();
-        examLink.classList.add("disabled");
-      } else if(now > examEnd){
-        messageDiv.innerText = "Exam time is over!";
-        countdownDiv.innerText = "";
-        examLink.classList.add("disabled");
-      } else {
-        messageDiv.innerText = "";
-        const diff = examEnd - now;
-        const minutes = Math.floor(diff/60000);
-        const seconds = Math.floor((diff%60000)/1000);
-        countdownDiv.innerText = `Time left: ${minutes} min ${seconds} sec`;
-        examLink.classList.remove("disabled");
-      }
-    }
+// Load PDF link
+async function loadPdfLink(){
+  const res = await fetch(WEBAPP_URL + "?action=getPdfLink");
+  const data = await res.json();
+  const container = document.getElementById('pdfLinkContainer');
+  if(data.link) container.innerHTML = `<a href="${data.link}" target="_blank" class="pdf-link">Open PDF</a>`;
+}
 
-    fetchExamTime();
-  </script>
+// Load questions
+async function loadQuestions(){
+  const res = await fetch(WEBAPP_URL + "?action=getQuestions");
+  const questions = await res.json();
+  const container = document.getElementById('questions');
+  container.innerHTML = '';
+  questions.forEach((q,i)=>{
+    const row = document.createElement('div');
+    row.className='question-row';
+    row.innerHTML = `
+      <div class="question">${q.question}</div>
+      <div class="answer"><input type="text" id="answer_${i}" placeholder="Your answer"></div>
+    `;
+    container.appendChild(row);
+  });
+}
+
+// Submit answers
+async function submitAnswers(){
+  const name = document.getElementById('studentName').value.trim();
+  const id = document.getElementById('studentId').value.trim();
+  if(!name||!id){ alert("Enter Name and ID"); return; }
+
+  const inputs = document.querySelectorAll('[id^="answer_"]');
+  const answers = Array.from(inputs).map(input=>input.value.trim());
+
+  document.getElementById('submitBtn').disabled=true;
+  document.getElementById('loading').innerText='Processing...';
+
+  const res = await fetch(WEBAPP_URL, {
+    method:'POST',
+    body: JSON.stringify({action:'checkAnswersAndSave', name, id, answers}),
+    headers: {'Content-Type':'application/json'}
+  });
+  const data = await res.json();
+  document.getElementById('submitBtn').disabled=false;
+  document.getElementById('loading').innerText='';
+  alert(data.message);
+}
+
+// Init
+async function init(){
+  await loadPdfLink();
+  await loadQuestions();
+}
+
+init();
+</script>
 </body>
 </html>
