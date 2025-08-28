@@ -21,9 +21,9 @@ a.pdf-link { color:#007bff; font-weight:bold; text-decoration:none; }
 </head>
 <body>
 <div class="card">
-<h2>Student Answers</h2>
+<h2>Auto Marking System</h2>
+
 <div id="pdfLinkContainer" style="text-align:center;"></div>
-<div id="loading"></div>
 
 <div class="input-group">
 <label>Student Name:</label>
@@ -36,67 +36,87 @@ a.pdf-link { color:#007bff; font-weight:bold; text-decoration:none; }
 
 <div id="questions"></div>
 
-<button id="submitBtn" onclick="submitAnswers()">Submit Answers</button>
+<button id="openBtn" onclick="openExam()">Open Exam</button>
+<button id="submitBtn" onclick="submitAnswers()" disabled>Submit Answers</button>
+
+<div id="loading"></div>
 </div>
 
 <script>
-const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbysGzWDR5bvBFjzUwSfXPGii8zClGcAFOXxf57FI2nHnbh5qz97wPTmo1-Ppbv1XZxvlQ/exec";
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbysGzWDR5bvBFjzUwSfXPGii8zClGcAFOXxf57FI2nHnbh5qz97wPTmo1-Ppbv1XZxvlQ/exec"; // <-- Ganti dengan URL Web App
+
+// Open Exam: load PDF link dan soalan
+async function openExam(){
+  document.getElementById('loading').innerText = "Loading exam...";
+  document.getElementById('openBtn').disabled = true;
+
+  await loadPdfLink();
+  await loadQuestions();
+
+  document.getElementById('submitBtn').disabled = false;
+  document.getElementById('loading').innerText = "";
+}
 
 // Load PDF link
 async function loadPdfLink(){
-  const res = await fetch(WEBAPP_URL + "?action=getPdfLink");
-  const data = await res.json();
-  const container = document.getElementById('pdfLinkContainer');
-  if(data.link) container.innerHTML = `<a href="${data.link}" target="_blank" class="pdf-link">Open PDF</a>`;
+  try{
+    const res = await fetch(WEBAPP_URL + "?action=getPdfLink");
+    const data = await res.json();
+    const container = document.getElementById('pdfLinkContainer');
+    if(data.link) container.innerHTML = `<a href="${data.link}" target="_blank" class="pdf-link">Open PDF</a>`;
+  }catch(err){
+    console.error(err);
+  }
 }
 
 // Load questions
 async function loadQuestions(){
-  const res = await fetch(WEBAPP_URL + "?action=getQuestions");
-  const questions = await res.json();
-  const container = document.getElementById('questions');
-  container.innerHTML = '';
-  questions.forEach((q,i)=>{
-    const row = document.createElement('div');
-    row.className='question-row';
-    row.innerHTML = `
-      <div class="question">${q.question}</div>
-      <div class="answer"><input type="text" id="answer_${i}" placeholder="Your answer"></div>
-    `;
-    container.appendChild(row);
-  });
+  try{
+    const res = await fetch(WEBAPP_URL + "?action=getQuestions");
+    const questions = await res.json();
+    const container = document.getElementById('questions');
+    container.innerHTML = '';
+    questions.forEach((q,i)=>{
+      const row = document.createElement('div');
+      row.className = 'question-row';
+      row.innerHTML = `
+        <div class="question">${q.question}</div>
+        <div class="answer"><input type="text" id="answer_${i}" placeholder="Your answer"></div>
+      `;
+      container.appendChild(row);
+    });
+  }catch(err){
+    console.error(err);
+  }
 }
 
 // Submit answers
 async function submitAnswers(){
   const name = document.getElementById('studentName').value.trim();
   const id = document.getElementById('studentId').value.trim();
-  if(!name||!id){ alert("Enter Name and ID"); return; }
+  if(!name || !id){ alert("Enter Name and ID"); return; }
 
   const inputs = document.querySelectorAll('[id^="answer_"]');
-  const answers = Array.from(inputs).map(input=>input.value.trim());
+  const answers = Array.from(inputs).map(input => input.value.trim());
 
-  document.getElementById('submitBtn').disabled=true;
-  document.getElementById('loading').innerText='Processing...';
+  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('loading').innerText = "Submitting...";
 
-  const res = await fetch(WEBAPP_URL, {
-    method:'POST',
-    body: JSON.stringify({action:'checkAnswersAndSave', name, id, answers}),
-    headers: {'Content-Type':'application/json'}
-  });
-  const data = await res.json();
-  document.getElementById('submitBtn').disabled=false;
-  document.getElementById('loading').innerText='';
-  alert(data.message);
+  try{
+    const res = await fetch(WEBAPP_URL, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({action:'checkAnswersAndSave', name, id, answers})
+    });
+    const data = await res.json();
+    alert(data.message);
+  }catch(err){
+    alert("Error submitting answers: "+err.message);
+  }
+
+  document.getElementById('submitBtn').disabled = false;
+  document.getElementById('loading').innerText = "";
 }
-
-// Init
-async function init(){
-  await loadPdfLink();
-  await loadQuestions();
-}
-
-init();
 </script>
 </body>
 </html>
