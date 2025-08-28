@@ -32,7 +32,7 @@ button:disabled { opacity:0.6; cursor:not-allowed; }
 <p id="result"></p>
 
 <script>
-const WEBAPP_URL="https://script.google.com/macros/s/AKfycbxZFmrObL3ZCpCTtCZi_nrQkZnIfL_fAZu7anmXeD2WHYXoAqgs24kytjDJl-SANXyWzg/exec"; // Ganti dengan Web App /exec URL
+const WEBAPP_URL="https://script.google.com/macros/s/AKfycbzoaPEzaypsebLigc15PUO8QDrBUf8s2PD0cpgchsB8q2_zzXfezOb9gfktMYpa68TOPw/exec"; 
 let questionData=[];
 
 async function loadPdfLink(){
@@ -40,7 +40,7 @@ async function loadPdfLink(){
     const res=await fetch(`${WEBAPP_URL}?action=getPdfLink`);
     const data=await res.json();
     const pdfContainer=document.getElementById("pdfLink");
-    if(data.link) pdfContainer.innerHTML=`<a href="${data.link}" target="_blank">Click here to open Question</a>`;
+    if(data.link) pdfContainer.innerHTML=`<a href="${data.link}" target="_blank">Click here to open PDF</a>`;
     else pdfContainer.innerText="No PDF link available.";
   }catch(err){document.getElementById("pdfLink").innerText="Failed to load PDF link: "+err;}
 }
@@ -69,18 +69,21 @@ async function submitAnswers(){
   const name=document.getElementById("studentName").value.trim();
   const id=document.getElementById("studentID").value.trim();
   const answers=questionData.map((_,i)=>document.getElementById(`ans${i}`).value);
+
+  // 🔹 guna GET request supaya tak kena block CORS
+  const url = `${WEBAPP_URL}?action=checkAnswersAndSave&name=${encodeURIComponent(name)}&id=${encodeURIComponent(id)}&answers=${encodeURIComponent(JSON.stringify(answers))}`;
+
   try{
-    const res=await fetch(WEBAPP_URL,{
-      method:"POST",
-      body:JSON.stringify({action:"checkAnswersAndSave",name,id,answers}),
-      headers:{"Content-Type":"application/json"}
-    });
-    const data=await res.json();
-    document.getElementById("result").innerText=data.message;
-  }catch(err){document.getElementById("result").innerText="Error submitting answers: "+err;}
+    const res = await fetch(url);
+    const data = await res.json();
+    document.getElementById("result").innerText = data.message;
+  }catch(err){
+    document.getElementById("result").innerText="Error submitting answers: "+err;
+  }
 }
 
 window.onload=loadPdfLink;
 </script>
+
 </body>
 </html>
